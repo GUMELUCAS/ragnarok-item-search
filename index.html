@@ -234,9 +234,9 @@
             if (!searchTerm) return;
             
             // Mostrar estado de carregamento
-            resultsContent.innerHTML = '<div class="loading">Buscando itens... Isso pode levar alguns segundos.</div>';
+            resultsContent.innerHTML = '<div class="loading">Buscando itens... Isso pode levar alguns minutos.</div>';
             statusInfo.style.display = 'block';
-            statusInfo.textContent = 'Verificando lojas...';
+            statusInfo.textContent = 'Verificando todas as lojas...';
             resultsSection.style.display = 'block';
             
             try {
@@ -252,7 +252,7 @@
                 
                 if (!data.item || data.vendings.length === 0) {
                     resultsContent.innerHTML = '<div class="no-results">Nenhum resultado encontrado para esta pesquisa.</div>';
-                    statusInfo.textContent = `Foram verificadas ${data.totalPagesChecked || 0} páginas de lojas.`;
+                    statusInfo.textContent = `Foram verificadas ${data.totalPages || 0} páginas de lojas.`;
                     return;
                 }
                 
@@ -295,7 +295,7 @@
                 `;
                 
                 resultsContent.innerHTML = tableHTML;
-                statusInfo.textContent = `Foram verificadas ${data.totalPagesChecked || 0} páginas de lojas.`;
+                statusInfo.textContent = `Foram verificadas ${data.totalPages || 0} páginas de lojas.`;
                 
                 // Atualizar informação de última atualização
                 const now = new Date();
