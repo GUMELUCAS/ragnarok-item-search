@@ -1,0 +1,10 @@
+{
+  "name": "netlify-functions",
+  "version": "1.0.0",
+  "description": "Dependencies for Netlify Functions",
+  "main": "scrape.js",
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "jsdom": "^19.0.0"
+  }
+}
