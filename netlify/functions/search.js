@@ -1,27 +1,90 @@
 const fetch = require('node-fetch');
-const { JSDOM } = require('jsdom');
 
-// Função auxiliar para fazer scraping de uma página
-async function fetchPage(url) {
-  try {
-    const response = await fetch(url);
-    return await response.text();
-  } catch (error) {
-    console.error(`Erro ao buscar ${url}:`, error);
-    return null;
-  }
+// Função para fazer parsing do HTML sem usar JSDOM (mais leve)
+function parseHTML(html) {
+  // Implementação simplificada de parser HTML
+  const extractText = (regex, html) => {
+    const match = html.match(regex);
+    return match ? match[1] : '';
+  };
+
+  return {
+    querySelectorAll: (selector) => {
+      const results = [];
+      
+      if (selector === 'a[href*="action=viewshop&id="]') {
+        const regex = /<a[^>]*href="[^"]*action=viewshop&id=(\d+)[^"]*"[^>]*>([^<]*)<\/a>/g;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+          results.push({
+            getAttribute: (attr) => attr === 'href' ? `?module=vending&action=viewshop&id=${match[1]}` : null,
+            textContent: match[2].trim()
+          });
+        }
+      }
+      
+      if (selector === 'table.vending tr') {
+        const regex = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+          if (match[1].includes('</td>')) {
+            results.push({
+              querySelectorAll: (tdSelector) => {
+                if (tdSelector === 'td') {
+                  const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/g;
+                  const tds = [];
+                  let tdMatch;
+                  while ((tdMatch = tdRegex.exec(match[1])) !== null) {
+                    tds.push({
+                      textContent: tdMatch[1].replace(/<[^>]*>/g, '').trim()
+                    });
+                  }
+                  return tds;
+                }
+                return [];
+              }
+            });
+          }
+        }
+      }
+      
+      return results;
+    },
+    
+    querySelector: (selector) => {
+      if (selector === '.pagination') {
+        const paginationMatch = html.match(/<div[^>]*class="[^"]*pagination[^"]*"[^>]*>([\s\S]*?)<\/div>/);
+        if (paginationMatch) {
+          return {
+            querySelectorAll: (selector) => {
+              if (selector === 'a') {
+                const linkRegex = /<a[^>]*href="[^"]*p=(\d+)[^"]*"[^>]*>/g;
+                const links = [];
+                let linkMatch;
+                while ((linkMatch = linkRegex.exec(paginationMatch[1])) !== null) {
+                  links.push({
+                    getAttribute: (attr) => attr === 'href' ? `?module=vending&p=${linkMatch[1]}` : null
+                  });
+                }
+                return links;
+              }
+              return [];
+            }
+          };
+        }
+      }
+      return null;
+    }
+  };
 }
 
 // Função para obter o número total de páginas de mercadores
 async function getTotalPages() {
   try {
-    const html = await fetchPage('https://site.heroragnarok.com/?module=vending');
-    if (!html) return 1;
+    const response = await fetch('https://site.heroragnarok.com/?module=vending');
+    const html = await response.text();
+    const document = parseHTML(html);
     
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
-    
-    // Encontrar o elemento de paginação
     const pagination = document.querySelector('.pagination');
     if (!pagination) return 1;
     
@@ -49,11 +112,9 @@ async function getTotalPages() {
 // Função para obter as lojas de uma página específica
 async function getStoresFromPage(page) {
   try {
-    const html = await fetchPage(`https://site.heroragnarok.com/?module=vending&p=${page}`);
-    if (!html) return [];
-    
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    const response = await fetch(`https://site.heroragnarok.com/?module=vending&p=${page}`);
+    const html = await response.text();
+    const document = parseHTML(html);
     
     const stores = [];
     const storeLinks = document.querySelectorAll('a[href*="action=viewshop&id="]');
@@ -64,7 +125,7 @@ async function getStoresFromPage(page) {
       if (match) {
         stores.push({
           id: parseInt(match[1]),
-          name: link.textContent.trim()
+          name: link.textContent
         });
       }
     });
@@ -79,11 +140,9 @@ async function getStoresFromPage(page) {
 // Função para obter os itens de uma loja específica
 async function getStoreItems(storeId) {
   try {
-    const html = await fetchPage(`https://site.heroragnarok.com/?module=vending&action=viewshop&id=${storeId}`);
-    if (!html) return [];
-    
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    const response = await fetch(`https://site.heroragnarok.com/?module=vending&action=viewshop&id=${storeId}`);
+    const html = await response.text();
+    const document = parseHTML(html);
     
     const items = [];
     const rows = document.querySelectorAll('table.vending tr');
@@ -99,12 +158,12 @@ async function getStoreItems(storeId) {
         
         items.push({
           id: itemId,
-          name: cols[1].textContent.trim(),
+          name: cols[1].textContent,
           quantity: parseInt(cols[2].textContent) || 0,
-          price: cols[3].textContent.trim(),
-          refinement: cols[4] ? cols[4].textContent.trim() : '0',
-          cards: cols[5] ? cols[5].textContent.trim() : '',
-          sellType: cols[6] ? cols[6].textContent.trim() : 'CASH'
+          price: cols[3].textContent,
+          refinement: cols[4] ? cols[4].textContent : '0',
+          cards: cols[5] ? cols[5].textContent : '',
+          sellType: cols[6] ? cols[6].textContent : 'CASH'
         });
       }
     }
@@ -154,13 +213,9 @@ exports.handler = async (event, context) => {
     const totalPages = await getTotalPages();
     console.log(`Total de páginas encontradas: ${totalPages}`);
     
-    // Limitar para 3 páginas para evitar timeout no Netlify
-    // Em produção, você pode aumentar este número ou implementar um cache
-    const pagesToCheck = Math.min(totalPages, 3);
-    
     // Verificar cada página
-    for (let page = 1; page <= pagesToCheck; page++) {
-      console.log(`Verificando página ${page} de ${pagesToCheck}`);
+    for (let page = 1; page <= totalPages; page++) {
+      console.log(`Verificando página ${page} de ${totalPages}`);
       
       const stores = await getStoresFromPage(page);
       console.log(`Encontradas ${stores.length} lojas na página ${page}`);
@@ -206,7 +261,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         item: foundItem,
         vendings: matchingVendings,
-        totalPagesChecked: pagesToCheck
+        totalPages: totalPages
       })
     };
   } catch (error) {
