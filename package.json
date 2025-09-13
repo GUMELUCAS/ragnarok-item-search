@@ -7,10 +7,8 @@
     "build": "echo 'Build completo'"
   },
   "dependencies": {
-    "node-fetch": "^2.7.0",
-    "jsdom": "^22.1.0"
+    "node-fetch": "^2.7.0"
   },
-  "devDependencies": {},
   "keywords": [],
   "author": "",
   "license": "ISC"
