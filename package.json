@@ -1,8 +1,11 @@
 {
-  "name": "netlify-functions",
+  "name": "ragnarok-item-search",
   "version": "1.0.0",
-  "description": "Dependencies for Netlify Functions",
-  "main": "scrape.js",
+  "description": "Pesquisa de itens do Ragnarok",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "node-fetch": "^2.6.7",
     "jsdom": "^19.0.0"
