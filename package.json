@@ -1,0 +1,17 @@
+{
+  "name": "ragnarok-item-search",
+  "version": "1.0.0",
+  "description": "Site de pesquisa de itens do Ragnarok",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'Build completo'"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0",
+    "jsdom": "^22.1.0"
+  },
+  "devDependencies": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
