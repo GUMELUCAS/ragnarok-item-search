@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa de Itens - Ragnarok</title>
+    <style>
+        :root {
+            --primary-color: #4a5568;
+            --secondary-color: #718096;
+            --accent-color: #f56565;
+            --background-color: #f7fafc;
+            --card-background: #ffffff;
+            --border-color: #e2e8f0;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: var(--card-background);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .search-section {
+            background-color: var(--card-background);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .search-button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .search-button:hover {
+            background-color: #e53e3e;
+        }
+        
+        .search-info {
+            color: var(--secondary-color);
+            font-size: 14px;
+        }
+        
+        .results-section {
+            background-color: var(--card-background);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .item-header {
+            padding: 20px;
+            background-color: #edf2f7;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .item-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .item-id {
+            color: var(--secondary-color);
+            font-size: 16px;
+        }
+        
+        .stores-header {
+            padding: 15px 20px;
+            background-color: #f8fafc;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: bold;
+        }
+        
+        .stores-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .stores-table th {
+            background-color: #f1f5f9;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .stores-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .stores-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--secondary-color);
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: var(--accent-color);
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: var(--secondary-color);
+        }
+        
+        .last-updated {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--secondary-color);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pesquisa de Itens - Ragnarok</h1>
+            <p>Encontre os melhores preços para seus itens em todas as lojas do servidor</p>
+        </header>
+        
+        <section class="search-section">
+            <form class="search-form" id="searchForm">
+                <input type="text" class="search-input" id="searchInput" placeholder="Digite o nome ou ID do item..." required>
+                <button type="submit" class="search-button">Buscar</button>
+            </form>
+            <p class="search-info">Você pode pesquisar por nome do item (ex.: "Smile Giver Card") ou por ID (ex.: "300273")</p>
+        </section>
+        
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <div class="item-header" id="itemHeader">
+                <div class="item-name" id="itemName"></div>
+                <div class="item-id" id="itemId"></div>
+            </div>
+            
+            <div class="stores-header">
+                Lojas Abertas
+            </div>
+            
+            <div id="resultsContent">
+                <!-- Os resultados serão inseridos aqui via JavaScript -->
+            </div>
+        </section>
+        
+        <div class="last-updated" id="lastUpdated"></div>
+    </div>
+
+    <script>
+        // URL da função Netlify que fará o scraping
+        const API_URL = "https://seu-site.netlify.app/.netlify/functions/scrape";
+        
+        // Elementos DOM
+        const searchForm = document.getElementById('searchForm');
+        const searchInput = document.getElementById('searchInput');
+        const resultsSection = document.getElementById('resultsSection');
+        const itemName = document.getElementById('itemName');
+        const itemId = document.getElementById('itemId');
+        const resultsContent = document.getElementById('resultsContent');
+        const lastUpdated = document.getElementById('lastUpdated');
+        
+        // Event listener para o formulário de pesquisa
+        searchForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const searchTerm = searchInput.value.trim();
+            if (!searchTerm) return;
+            
+            // Mostrar estado de carregamento
+            resultsContent.innerHTML = '<div class="loading">Buscando itens... Isso pode levar alguns segundos.</div>';
+            resultsSection.style.display = 'block';
+            
+            try {
+                // Fazer a requisição para a API
+                const response = await fetch(`${API_URL}?item=${encodeURIComponent(searchTerm)}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    resultsContent.innerHTML = `<div class="error">Erro: ${data.error}</div>`;
+                    return;
+                }
+                
+                if (!data.item || data.vendings.length === 0) {
+                    resultsContent.innerHTML = '<div class="no-results">Nenhum resultado encontrado para esta pesquisa.</div>';
+                    return;
+                }
+                
+                // Atualizar informações do item
+                itemName.textContent = data.item.name;
+                itemId.textContent = `ID: ${data.item.id}`;
+                
+                // Criar tabela de resultados
+                let tableHTML = `
+                    <table class="stores-table">
+                        <thead>
+                            <tr>
+                                <th>Loja</th>
+                                <th>Refinamento</th>
+                                <th>Cartas</th>
+                                <th>Valor</th>
+                                <th>Qtd</th>
+                                <th>Venda Por</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                data.vendings.forEach(vending => {
+                    tableHTML += `
+                        <tr>
+                            <td>${vending.store}</td>
+                            <td>${vending.refinement}</td>
+                            <td>${vending.cards}</td>
+                            <td>${vending.price}</td>
+                            <td>${vending.quantity}</td>
+                            <td>${vending.sellType}</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+                
+                resultsContent.innerHTML = tableHTML;
+                
+                // Atualizar informação de última atualização
+                const now = new Date();
+                lastUpdated.textContent = `Última atualização: ${now.toLocaleString('pt-BR')}`;
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                resultsContent.innerHTML = '<div class="error">Ocorreu um erro ao buscar os dados. Tente novamente.</div>';
+            }
+        });
+    </script>
+</body>
+</html>
